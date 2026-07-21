@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Maxikash México - Control de Incapacidades IMSS</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <!-- SheetJS CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
+    .bg-maxikash-blue { background-color: #0c2f80; }
+    .text-maxikash-blue { color: #0c2f80; }
+    .bg-maxikash-yellow { background-color: #76ff03; }
+    .text-maxikash-yellow { color: #76ff03; }
+    @keyframes spin-slow { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .animate-logo-spin { animation: spin-slow 12s linear infinite; }
+    .drop-area-active { border-color: #0c2f80 !important; background-color: #e0e7ff !important; }
+  </style>
+</head>
+<body class="text-gray-800 flex flex-col min-h-screen">
+
+  <!-- Header Institucional -->
+  <header class="sticky top-0 z-50 bg-maxikash-blue text-white shadow-xl py-4 px-6 border-b-4 border-maxikash-yellow">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+      <div class="flex items-center space-x-4">
+        <div class="w-14 h-14 bg-white/10 rounded-2xl p-2.5 flex items-center justify-center backdrop-blur-sm border border-white/20 shadow-inner">
+          <svg class="w-10 h-10 animate-logo-spin drop-shadow" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <polygon points="50,10 90,50 50,90 10,50" fill="#76ff03"/>
+            <polygon points="50,10 90,50 50,50" fill="#0052cc"/>
+            <polygon points="10,50 50,90 50,50" fill="#0c2f80"/>
+            <polygon points="50,30 70,50 50,70 30,50" fill="#0c2f80"/>
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-xl md:text-2xl font-black tracking-wider uppercase text-white">
+              AMIGO EFECTIVO SAPI DE C.V. <span class="text-maxikash-yellow">MAXIKASH MÉXICO</span>
+            </h1>
+            <span class="bg-maxikash-yellow text-maxikash-blue font-extrabold text-[10px] px-2 py-0.5 rounded-full shadow">
+              RRHH
+            </span>
+          </div>
+          <p class="text-xs md:text-sm font-semibold tracking-wide text-blue-100 uppercase">
+            Sistema de Control de Incapacidades IMSS
+          </p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold bg-white/10 text-white border border-white/20 shadow-sm">
+          <span class="w-2.5 h-2.5 rounded-full bg-maxikash-yellow animate-pulse"></span> Servidor Conectado
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Contenido Principal -->
+  <main class="flex-grow max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8 w-full">
+
+    <!-- Carga de Excel -->
+    <div class="lg:col-span-12 bg-white rounded-xl shadow-md border border-gray-200 p-5">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-3">
+        <div>
+          <h2 class="text-sm font-black text-maxikash-blue flex items-center gap-2 uppercase">
+            <i class="fa-solid fa-file-excel text-green-600"></i> Cargar Plantilla Excel de Colaboradores (.xls / .xlsx)
+          </h2>
+          <p class="text-xs text-gray-500">Solo se procesarán automáticamente las pestañas que contengan la palabra <strong>"ACTIVOS"</strong>.</p>
+        </div>
+        <div class="flex gap-2 items-center">
+          <span id="contadorEmpleados" class="bg-blue-50 text-maxikash-blue font-bold text-xs px-3 py-1.5 rounded-full border border-blue-200">
+            0 Empleados Cargados
+          </span>
+          <button type="button" onclick="limpiarDB()" class="text-xs text-red-600 hover:underline font-bold px-2">Borrar Base</button>
+        </div>
+      </div>
+
+      <div id="dropZoneEmpleados" 
+           ondragover="handleDragOver(event)" 
+           ondragleave="handleDragLeave(event)" 
+           ondrop="handleFileDrop(event)" 
+           class="border-2 border-dashed border-blue-200 rounded-xl p-5 bg-blue-50/30 text-center transition cursor-pointer hover:bg-blue-50">
+        <input type="file" id="fileExcel" accept=".xls,.xlsx,.csv" class="hidden" onchange="procesarArchivoExcel(event)">
+        <div class="flex flex-col items-center justify-center gap-1.5" onclick="document.getElementById('fileExcel').click()">
+          <i class="fa-solid fa-file-excel text-4xl text-green-600"></i>
+          <p class="text-xs font-bold text-maxikash-blue">Arrastra tu archivo de Excel aquí o haz clic para seleccionarlo</p>
+          <span class="text-[10px] text-gray-400">Archivos permitidos: .xls, .xlsx y .csv</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Formulario de Registro -->
+    <div class="lg:col-span-8 space-y-6">
+      <div class="bg-white rounded-xl shadow-md border border-gray-200 p-6">
+        <h2 class="text-lg font-black text-maxikash-blue mb-4 pb-2 border-b-2 border-maxikash-yellow flex items-center gap-2">
+          <i class="fa-solid fa-id-card"></i> Registro de Nueva Incapacidad
+        </h2>
+
+        <form id="incapacidadForm" onsubmit="guardarRegistro(event)" class="space-y-4">
+          
+          <!-- Búsqueda y Autocompletado -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="relative">
+              <label class="block text-xs font-bold text-gray-700 mb-1">Apellidos y Nombre del Colaborador *</label>
+              <input type="text" id="nombreCompleto" required autocomplete="off" placeholder="Buscar por Apellidos Nombre..." oninput="buscarEmpleado(this.value)" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-maxikash-blue focus:outline-none">
+              <div id="searchResults" class="absolute z-30 w-full bg-white border border-gray-300 rounded-lg shadow-xl mt-1 max-h-56 overflow-y-auto hidden"></div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-gray-700 mb-1">NSS / DPI (Identificación)</label>
+              <input type="text" id="nss" placeholder="Número de Identificación" class="w-full px-3 py-2 border rounded-lg text-sm font-bold text-gray-700 focus:ring-2 focus:ring-maxikash-blue focus:outline-none">
+            </div>
+          </div>
+
+          <!-- Campos Organizacionales -->
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-3 bg-gray-50 p-3 rounded-xl border border-gray-200">
+            <div>
+              <label class="block text-[11px] font-bold text-gray-600 mb-1">Empresa</label>
+              <input type="text" id="empresaInput" placeholder="Maxikash MX" class="w-full px-2.5 py-1.5 border rounded-lg text-xs bg-white text-maxikash-blue font-extrabold">
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-gray-600 mb-1">Puesto</label>
+              <input type="text" id="puestoInput" placeholder="S/I" class="w-full px-2.5 py-1.5 border rounded-lg text-xs bg-white text-gray-700 font-semibold">
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-gray-600 mb-1">Departamento</label>
+              <input type="text" id="departamentoInput" placeholder="S/I" class="w-full px-2.5 py-1.5 border rounded-lg text-xs bg-white text-gray-700 font-semibold">
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-gray-600 mb-1">Área</label>
+              <input type="text" id="areaInput" placeholder="S/I" class="w-full px-2.5 py-1.5 border rounded-lg text-xs bg-white text-gray-700 font-semibold">
+            </div>
+          </div>
+
+          <!-- Folio y Datos -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-gray-700 mb-1">Folio de Incapacidad *</label>
+              <input type="text" id="folio" required placeholder="Ej. IMSS-98765432" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-maxikash-blue focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-gray-700 mb-1">Ramo de Incapacidad *</label>
+              <select id="ramo" required class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-maxikash-blue focus:outline-none">
+                <option value="">Seleccione Ramo</option>
+                <option value="Riesgo de Trabajo">Riesgo de Trabajo</option>
+                <option value="Enfermedad General">Enfermedad General</option>
+                <option value="Maternidad">Maternidad</option>
+                <option value="Licencia 140-Bis">Licencia 140-Bis</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-gray-700 mb-1">Estatus *</label>
+              <select id="estatus" required class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-maxikash-blue focus:outline-none">
+                <option value="Inicial">Inicial</option>
+                <option value="Subsecuente">Subsecuente</option>
+                <option value="Alta Médica">Alta Médica</option>
+                <option value="En Revisión">En Revisión</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Fechas y Días Autorizados (Ajustado) -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-gray-700 mb-1">Fecha de Inicio *</label>
+              <input type="date" id="fechaInicio" required onchange="calcularFechaTermino()" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-maxikash-blue focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-gray-700 mb-1">Días Autorizados *</label>
+              <input type="number" id="diasAutorizados" min="1" value="1" required oninput="calcularFechaTermino()" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-maxikash-blue focus:outline-none font-bold text-maxikash-blue">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-gray-700 mb-1">Fecha de Término (Calculada)</label>
+              <input type="date" id="fechaTermino" readonly class="w-full px-3 py-2 border rounded-lg text-sm bg-gray-100 text-gray-700 font-bold">
+            </div>
+          </div>
+
+          <!-- Personal Responsable -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-gray-700 mb-1">Fecha de Registro</label>
+              <input type="date" id="fechaRegistro" readonly class="w-full px-3 py-2 border rounded-lg text-sm bg-gray-100 text-gray-600 font-semibold">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-gray-700 mb-1">Jefe Inmediato</label>
+              <input type="text" id="nombreJefe" placeholder="Nombre del Jefe" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-maxikash-blue focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-gray-700 mb-1">Representante RRHH</label>
+              <input type="text" id="representanteRRHH" placeholder="Ej. Lic. Ana Morales" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-maxikash-blue focus:outline-none">
+            </div>
+          </div>
+
+          <!-- Archivo Adjunto -->
+          <div class="border-2 border-dashed border-gray-300 rounded-xl p-4 bg-gray-50 text-center">
+            <label class="block text-xs font-bold text-gray-700 mb-2 flex items-center justify-center gap-1">
+              <i class="fa-solid fa-paperclip text-maxikash-blue"></i> Comprobante IMSS (PDF o Imagen)
+            </label>
+            <input type="file" id="archivoIncapacidad" accept="image/*,application/pdf" onchange="procesarArchivo(event)" class="hidden">
+            <button type="button" onclick="document.getElementById('archivoIncapacidad').click()" class="bg-white border border-gray-300 text-maxikash-blue px-4 py-2 rounded-lg text-sm font-bold hover:bg-gray-100 transition shadow-sm inline-flex items-center gap-2">
+              <i class="fa-solid fa-cloud-arrow-up text-maxikash-blue"></i> Seleccionar Archivo
+            </button>
+            <p id="archivoNombre" class="text-xs text-gray-500 mt-2 italic font-medium">Ningún archivo seleccionado</p>
+          </div>
+
+          <!-- Observaciones -->
+          <div>
+            <label class="block text-xs font-bold text-gray-700 mb-1">Observaciones</label>
+            <textarea id="observaciones" rows="2" placeholder="Comentarios adicionales..." class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-maxikash-blue focus:outline-none"></textarea>
+          </div>
+
+          <button type="submit" id="btnGuardar" class="w-full bg-maxikash-blue hover:bg-blue-900 text-white font-extrabold py-3.5 px-6 rounded-xl transition shadow-lg flex items-center justify-center gap-3 text-base">
+            <i class="fa-solid fa-circle-check text-maxikash-yellow text-lg"></i> Registrar e Integrar Expediente
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Panel Resumen -->
+    <div class="lg:col-span-4 space-y-6">
+      <div class="bg-white rounded-xl shadow-md border border-gray-200 p-5">
+        <h3 class="text-xs font-black text-maxikash-blue uppercase tracking-wider mb-3 flex items-center gap-2">
+          <i class="fa-solid fa-chart-pie text-maxikash-blue"></i> Resumen de Registros
+        </h3>
+        <div class="grid grid-cols-2 gap-3 text-center">
+          <div class="bg-blue-50/70 p-3 rounded-xl border border-blue-100">
+            <p class="text-xs text-gray-600 font-bold">Total Incapacidades</p>
+            <p id="statTotal" class="text-2xl font-black text-maxikash-blue">0</p>
+          </div>
+          <div class="bg-amber-50/70 p-3 rounded-xl border border-amber-100">
+            <p class="text-xs text-gray-600 font-bold">Días Acumulados</p>
+            <p id="statDias" class="text-2xl font-black text-amber-600">0</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl shadow-md border border-gray-200 p-5">
+        <h3 class="text-xs font-black text-maxikash-blue uppercase tracking-wider mb-3 flex items-center gap-2">
+          <i class="fa-solid fa-file-contract text-maxikash-blue"></i> Último Comprobante
+        </h3>
+        <div id="previewContainer" class="text-center p-4 border border-gray-100 bg-gray-50 rounded-lg text-xs text-gray-500">
+          <i class="fa-solid fa-file-pdf text-4xl text-gray-300 mb-2 block"></i>
+          <span>Sin archivo adjunto</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabla de Registros -->
+    <div class="lg:col-span-12 bg-white rounded-xl shadow-md border border-gray-200 p-6">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
+        <div>
+          <h2 class="text-lg font-black text-maxikash-blue flex items-center gap-2">
+            <i class="fa-solid fa-table text-maxikash-blue"></i> Historial de Incapacidades Registradas
+          </h2>
+        </div>
+        <div class="flex gap-2">
+          <button type="button" onclick="exportarCSV()" class="bg-slate-100 hover:bg-slate-200 text-maxikash-blue px-3.5 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 border border-slate-300">
+            <i class="fa-solid fa-file-csv text-green-600"></i> Exportar CSV
+          </button>
+          <button type="button" onclick="limpiarRegistros()" class="bg-red-50 hover:bg-red-100 text-red-600 px-3.5 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 border border-red-200">
+            <i class="fa-solid fa-trash"></i> Vaciar Historial
+          </button>
+        </div>
+      </div>
+
+      <!-- Contenedor con Scrollbar sin límite de filas -->
+      <div class="overflow-x-auto max-h-[500px] overflow-y-auto border border-gray-200 rounded-lg shadow-inner">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead class="sticky top-0 bg-maxikash-blue text-white font-bold z-10 shadow">
+            <tr>
+              <th class="p-3">Apellidos Nombre</th>
+              <th class="p-3">Empresa</th>
+              <th class="p-3">NSS / DPI</th>
+              <th class="p-3">Folio</th>
+              <th class="p-3">Ramo</th>
+              <th class="p-3">Inicio</th>
+              <th class="p-3">Término</th>
+              <th class="p-3 text-center">Días</th>
+              <th class="p-3">Estatus</th>
+              <th class="p-3">Puesto / Depto</th>
+              <th class="p-3">Jefe / RRHH</th>
+              <th class="p-3 text-center">Documento</th>
+            </tr>
+          </thead>
+          <tbody id="tablaCuerpo" class="divide-y divide-gray-100 bg-white">
+            <!-- Registros dinámicos -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Footer Institucional -->
+  <footer class="bg-maxikash-blue text-white py-5 px-8 mt-auto w-full border-t border-blue-900/50">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+      <div class="flex-1">
+        <h4 class="text-xs md:text-sm font-extrabold tracking-wide uppercase text-white mb-1">
+          RECURSOS HUMANOS • AMIGO EFECTIVO SAPI DE C.V. MAXIKASH MÉXICO
+        </h4>
+        <p class="text-[11px] text-gray-300 leading-snug">
+          Este aplicativo se alinea con los lineamientos de control e integración de expedientes de Incapacidades IMSS.
+        </p>
+      </div>
+      
+      <div class="shrink-0">
+        <div class="border border-white/20 rounded-xl px-4 py-2 text-xs text-white bg-white/5 whitespace-nowrap">
+          Desarrollado por <span class="text-maxikash-yellow font-bold">@asherowen</span> • Copyright © 2026 Todos los derechos reservados • <strong>MaxiKash</strong>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyrVQjm6-rH0iEFMSJibUikYeRzVwNAb8AiE7vlOuthu_z-NkMKj-FbwjlzYVMM-e0PEQ/exec";
+    let empleadosDB = [];
+    let incapacidadesDB = [];
+    let archivoProcesado = null;
+
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("fechaRegistro").value = new Date().toISOString().split('T')[0];
+      
+      const dbGuardada = localStorage.getItem("empleadosMaxikashDB");
+      if (dbGuardada) {
+        try { empleadosDB = JSON.parse(dbGuardada); } catch(e) { empleadosDB = []; }
+      }
+
+      const incGuardadas = localStorage.getItem("incapacidadesIMSS");
+      if (incGuardadas) {
+        try { incapacidadesDB = JSON.parse(incGuardadas); } catch(e) { incapacidadesDB = []; }
+      }
+
+      actualizarContadorEmpleados();
+      actualizarTabla();
+    });
+
+    function handleDragOver(e) { e.preventDefault(); document.getElementById('dropZoneEmpleados').classList.add('drop-area-active'); }
+    function handleDragLeave(e) { e.preventDefault(); document.getElementById('dropZoneEmpleados').classList.remove('drop-area-active'); }
+    function handleFileDrop(e) { e.preventDefault(); document.getElementById('dropZoneEmpleados').classList.remove('drop-area-active'); if (e.dataTransfer.files.length > 0) leerArchivoExcel(e.dataTransfer.files[0]); }
+    function procesarArchivoExcel(e) { if (e.target.files[0]) leerArchivoExcel(e.target.files[0]); }
+
+    function obtenerEmpresaPorHoja(nombreHoja) {
+      const h = nombreHoja.toUpperCase().trim();
+      if (h.includes("GUATEMALA") || h.includes("GT")) return "Maxikash GT";
+      if (h.includes("FURIA")) return "Furiamotos MX";
+      return "Maxikash MX";
+    }
+
+    function leerArchivoExcel(file) {
+      const reader = new FileReader();
+
+      reader.onload = function(e) {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array', cellDates: false, raw: false });
+          let consolidados = [];
+
+          workbook.SheetNames.forEach(sheetName => {
+            const sheetUpper = sheetName.toUpperCase().trim();
+            if (!sheetUpper.includes("ACTIVOS")) return;
+
+            const worksheet = workbook.Sheets[sheetName];
+            const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "", raw: false });
+            if (!rows || rows.length <= 1) return;
+
+            const empresaAsignada = obtenerEmpresaPorHoja(sheetName);
+
+            const mapeados = rows.slice(1).map(row => {
+              if (!row || row.length === 0) return null;
+
+              const apellidosNombre = String(row[6] || row[7] || "").trim();
+              if (!apellidosNombre || apellidosNombre.length < 3 || apellidosNombre.toUpperCase().includes("APELLIDOS")) return null;
+
+              let nssODpi = "S/N";
+              if (sheetUpper.includes("GUATEMALA") || sheetUpper.includes("GT")) {
+                nssODpi = String(row[30] || row[27] || "").trim();
+              } else {
+                nssODpi = String(row[27] || row[28] || "").trim();
+              }
+
+              if (nssODpi.includes("GMT") || nssODpi.includes("00:00") || nssODpi.length < 3) {
+                nssODpi = "S/N";
+              }
+
+              return {
+                nombre: apellidosNombre,
+                empresa: empresaAsignada,
+                nss: nssODpi,
+                puesto: String(row[14] || "").trim(),
+                departamento: String(row[15] || "").trim(),
+                area: String(row[16] || "").trim(),
+                jefe: String(row[20] || row[17] || "").trim()
+              };
+            }).filter(emp => emp !== null);
+
+            consolidados = consolidados.concat(mapeados);
+          });
+
+          if (consolidados.length === 0) {
+            return alert("No se encontraron colaboradores válidos.");
+          }
+
+          empleadosDB = consolidados;
+          try {
+            localStorage.setItem("empleadosMaxikashDB", JSON.stringify(empleadosDB));
+          } catch(e) {
+            console.warn("Base cargada en RAM.");
+          }
+          
+          actualizarContadorEmpleados();
+          alert(`¡Éxito! Se cargaron ${empleadosDB.length} colaboradores correctamente.`);
+          
+        } catch (error) { 
+          console.error("Error al procesar Excel:", error);
+          alert("Error al leer el archivo Excel."); 
+        }
+      };
+
+      reader.readAsArrayBuffer(file);
+    }
+
+    function actualizarContadorEmpleados() {
+      document.getElementById('contadorEmpleados').innerText = `${empleadosDB ? empleadosDB.length : 0} Empleados Cargados`;
+    }
+
+    function limpiarDB() {
+      if (confirm("¿Desea borrar la base de colaboradores cargados?")) {
+        localStorage.removeItem("empleadosMaxikashDB");
+        empleadosDB = [];
+        actualizarContadorEmpleados();
+      }
+    }
+
+    function buscarEmpleado(query) {
+      const resultsDiv = document.getElementById("searchResults");
+      if (!query || query.length < 2) { resultsDiv.classList.add("hidden"); return; }
+      const q = query.toLowerCase().trim();
+      const coincidencias = empleadosDB.filter(emp => emp.nombre.toLowerCase().includes(q) || emp.nss.toLowerCase().includes(q));
+
+      if (!coincidencias.length) {
+        resultsDiv.innerHTML = `<div class="p-3 text-xs text-gray-400 text-center">Sin coincidencias</div>`;
+        resultsDiv.classList.remove("hidden");
+        return;
+      }
+
+      resultsDiv.innerHTML = "";
+      coincidencias.slice(0, 10).forEach(emp => {
+        const item = document.createElement("div");
+        item.className = "p-2.5 hover:bg-blue-50 cursor-pointer border-b border-gray-100 text-xs flex justify-between items-center";
+        item.innerHTML = `<div><p class="font-bold text-maxikash-blue">${emp.nombre}</p><p class="text-[10px] text-gray-500">NSS/DPI: ${emp.nss || 'S/N'}</p></div><span class="bg-blue-100 text-maxikash-blue font-black text-[9px] px-2 py-0.5 rounded-full">${emp.empresa}</span>`;
+        item.onclick = () => seleccionarEmpleado(emp);
+        resultsDiv.appendChild(item);
+      });
+      resultsDiv.classList.remove("hidden");
+    }
+
+    function seleccionarEmpleado(emp) {
+      document.getElementById("nombreCompleto").value = emp.nombre;
+      document.getElementById("empresaInput").value = emp.empresa || "Maxikash MX";
+      document.getElementById("nss").value = emp.nss || "";
+      document.getElementById("puestoInput").value = emp.puesto || "";
+      document.getElementById("departamentoInput").value = emp.departamento || "";
+      document.getElementById("areaInput").value = emp.area || "";
+      document.getElementById("nombreJefe").value = emp.jefe || "";
+      document.getElementById("searchResults").classList.add("hidden");
+    }
+
+    // Nueva función que calcula automáticamente la fecha de término basada en los Días Autorizados
+    function calcularFechaTermino() {
+      const fechaInicioInput = document.getElementById("fechaInicio").value;
+      const diasInput = parseInt(document.getElementById("diasAutorizados").value) || 0;
+
+      if (fechaInicioInput && diasInput > 0) {
+        const [year, month, day] = fechaInicioInput.split('-').map(Number);
+        const fechaTermino = new Date(year, month - 1, day);
+        fechaTermino.setDate(fechaTermino.getDate() + (diasInput - 1));
+
+        const yyyy = fechaTermino.getFullYear();
+        const mm = String(fechaTermino.getMonth() + 1).padStart(2, '0');
+        const dd = String(fechaTermino.getDate()).padStart(2, '0');
+
+        document.getElementById("fechaTermino").value = `${yyyy}-${mm}-${dd}`;
+      } else {
+        document.getElementById("fechaTermino").value = "";
+      }
+    }
+
+    function procesarArchivo(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        archivoProcesado = {
+          nuevoNombre: file.name,
+          base64: e.target.result
+        };
+        document.getElementById("archivoNombre").innerText = `Adjunto: ${file.name}`;
+        document.getElementById("previewContainer").innerHTML = `<p class="font-bold text-maxikash-blue text-xs">${file.name}</p>`;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function guardarRegistro(event) {
+      event.preventDefault();
+
+      const btn = document.getElementById("btnGuardar");
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Guardando...`;
+
+      const nuevoRegistro = {
+        id: Date.now(),
+        nombreCompleto: document.getElementById("nombreCompleto").value,
+        empresa: document.getElementById("empresaInput").value || "Maxikash MX",
+        nss: document.getElementById("nss").value || "S/N",
+        folio: document.getElementById("folio").value,
+        ramo: document.getElementById("ramo").value,
+        fechaInicio: document.getElementById("fechaInicio").value,
+        fechaTermino: document.getElementById("fechaTermino").value,
+        diasAutorizados: document.getElementById("diasAutorizados").value || 1,
+        estatus: document.getElementById("estatus").value,
+        puesto: document.getElementById("puestoInput").value || "S/I",
+        departamento: document.getElementById("departamentoInput").value || "S/I",
+        area: document.getElementById("areaInput").value || "S/I",
+        fechaRegistro: document.getElementById("fechaRegistro").value,
+        nombreJefe: document.getElementById("nombreJefe").value || "S/I",
+        representanteRRHH: document.getElementById("representanteRRHH").value || "S/I",
+        observaciones: document.getElementById("observaciones").value || "",
+        documentoNombre: archivoProcesado ? archivoProcesado.nuevoNombre : "Sin comprobante",
+        documentoUrl: archivoProcesado ? archivoProcesado.base64 : "#"
+      };
+
+      incapacidadesDB.push(nuevoRegistro);
+
+      try {
+        localStorage.setItem("incapacidadesIMSS", JSON.stringify(incapacidadesDB));
+      } catch (e) {
+        try {
+          let sinArchivos = incapacidadesDB.map(item => ({ ...item, documentoUrl: '#' }));
+          localStorage.setItem("incapacidadesIMSS", JSON.stringify(sinArchivos));
+        } catch(err) {}
+      }
+
+      if (GOOGLE_SCRIPT_URL) {
+        fetch(GOOGLE_SCRIPT_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(nuevoRegistro)
+        }).catch(e => console.warn("Sincronización externa en segundo plano."));
+      }
+
+      actualizarTabla();
+
+      btn.disabled = false;
+      btn.innerHTML = `<i class="fa-solid fa-circle-check text-maxikash-yellow text-lg"></i> Registrar e Integrar Expediente`;
+      document.getElementById("incapacidadForm").reset();
+      archivoProcesado = null;
+      document.getElementById("archivoNombre").innerText = "Ningún archivo seleccionado";
+      document.getElementById("fechaRegistro").value = new Date().toISOString().split('T')[0];
+
+      alert("¡Registro guardado exitosamente!");
+    }
+
+    function actualizarTabla() {
+      const tbody = document.getElementById("tablaCuerpo");
+      tbody.innerHTML = "";
+      let totalDias = 0;
+
+      if (incapacidadesDB.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="12" class="text-center py-6 text-gray-400">No hay incapacidades registradas aún.</td></tr>`;
+        document.getElementById("statTotal").innerText = "0";
+        document.getElementById("statDias").innerText = "0";
+        return;
+      }
+
+      incapacidadesDB.slice().reverse().forEach((reg) => {
+        totalDias += parseInt(reg.diasAutorizados || 0);
+        const tr = document.createElement("tr");
+        tr.className = "hover:bg-blue-50/50 border-b border-gray-100 transition";
+        tr.innerHTML = `
+          <td class="p-3 font-bold text-gray-800">${reg.nombreCompleto}</td>
+          <td class="p-3 font-black text-maxikash-blue">${reg.empresa}</td>
+          <td class="p-3 font-medium text-gray-600">${reg.nss}</td>
+          <td class="p-3 text-maxikash-blue font-bold">${reg.folio}</td>
+          <td class="p-3">${reg.ramo}</td>
+          <td class="p-3">${reg.fechaInicio}</td>
+          <td class="p-3">${reg.fechaTermino}</td>
+          <td class="p-3 text-center font-black text-maxikash-blue">${reg.diasAutorizados}</td>
+          <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-blue-100 text-maxikash-blue">${reg.estatus}</span></td>
+          <td class="p-3 text-[11px]">${reg.puesto} / ${reg.departamento}</td>
+          <td class="p-3 text-[11px]">${reg.nombreJefe} / ${reg.representanteRRHH}</td>
+          <td class="p-3 text-center">
+            ${reg.documentoUrl && reg.documentoUrl !== '#' ? `<a href="${reg.documentoUrl}" download="${reg.documentoNombre}" class="bg-maxikash-blue text-white px-2 py-1 rounded text-[10px] font-bold">Descargar</a>` : '<span class="text-gray-400">Registrado</span>'}
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById("statTotal").innerText = incapacidadesDB.length;
+      document.getElementById("statDias").innerText = totalDias;
+    }
+
+    function exportarCSV() {
+      if (!incapacidadesDB.length) return alert("No hay datos para exportar.");
+      let csv = "data:text/csv;charset=utf-8,Apellidos_Nombre,Empresa,NSS_DPI,Folio,Ramo,Inicio,Termino,Dias,Estatus\n";
+      incapacidadesDB.forEach(r => csv += `"${r.nombreCompleto}","${r.empresa}","${r.nss}","${r.folio}","${r.ramo}","${r.fechaInicio}","${r.fechaTermino}","${r.diasAutorizados}","${r.estatus}"\n`);
+      const link = document.createElement("a");
+      link.href = encodeURI(csv);
+      link.download = "Incapacidades.csv";
+      link.click();
+    }
+
+    function limpiarRegistros() {
+      if (confirm("¿Vaciar todo el historial de incapacidades?")) {
+        localStorage.removeItem("incapacidadesIMSS");
+        incapacidadesDB = [];
+        actualizarTabla();
+      }
+    }
+  </script>
+</body>
+</html>
