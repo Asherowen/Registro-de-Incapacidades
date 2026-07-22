@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -137,6 +138,36 @@
             </div>
           </div>
 
+          <!-- NUEVOS CAMPOS: Mes y Quincena Correspondiente (Manual) -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-blue-50/50 p-3 rounded-xl border border-blue-100">
+            <div>
+              <label class="block text-xs font-bold text-maxikash-blue mb-1"><i class="fa-solid fa-calendar-days"></i> Mes Correspondiente *</label>
+              <select id="mesCorrespondiente" required class="w-full px-3 py-2 border rounded-lg text-sm font-bold focus:ring-2 focus:ring-maxikash-blue focus:outline-none bg-white">
+                <option value="">Seleccione Mes</option>
+                <option value="ENERO">Enero</option>
+                <option value="FEBRERO">Febrero</option>
+                <option value="MARZO">Marzo</option>
+                <option value="ABRIL">Abril</option>
+                <option value="MAYO">Mayo</option>
+                <option value="JUNIO">Junio</option>
+                <option value="JULIO">Julio</option>
+                <option value="AGOSTO">Agosto</option>
+                <option value="SEPTIEMBRE">Septiembre</option>
+                <option value="OCTUBRE">Octubre</option>
+                <option value="NOVIEMBRE">Noviembre</option>
+                <option value="DICIEMBRE">Diciembre</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-maxikash-blue mb-1"><i class="fa-solid fa-clock"></i> Quincena Correspondiente *</label>
+              <select id="quincenaCorrespondiente" required class="w-full px-3 py-2 border rounded-lg text-sm font-bold focus:ring-2 focus:ring-maxikash-blue focus:outline-none bg-white">
+                <option value="">Seleccione Quincena</option>
+                <option value="QNA 1">QNA 1 (Primera Quincena)</option>
+                <option value="QNA 2">QNA 2 (Segunda Quincena)</option>
+              </select>
+            </div>
+          </div>
+
           <!-- Folio y Datos -->
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
@@ -164,7 +195,7 @@
             </div>
           </div>
 
-          <!-- Fechas y Días Autorizados (Ajustado) -->
+          <!-- Fechas y Días Autorizados -->
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label class="block text-xs font-bold text-gray-700 mb-1">Fecha de Inicio *</label>
@@ -268,14 +299,14 @@
         </div>
       </div>
 
-      <!-- Contenedor con Scrollbar sin límite de filas -->
+      <!-- Contenedor con Scrollbar -->
       <div class="overflow-x-auto max-h-[500px] overflow-y-auto border border-gray-200 rounded-lg shadow-inner">
         <table class="w-full text-left text-xs border-collapse">
           <thead class="sticky top-0 bg-maxikash-blue text-white font-bold z-10 shadow">
             <tr>
               <th class="p-3">Apellidos Nombre</th>
               <th class="p-3">Empresa</th>
-              <th class="p-3">NSS / DPI</th>
+              <th class="p-3">Mes / Quincena</th>
               <th class="p-3">Folio</th>
               <th class="p-3">Ramo</th>
               <th class="p-3">Inicio</th>
@@ -283,7 +314,6 @@
               <th class="p-3 text-center">Días</th>
               <th class="p-3">Estatus</th>
               <th class="p-3">Puesto / Depto</th>
-              <th class="p-3">Jefe / RRHH</th>
               <th class="p-3 text-center">Documento</th>
             </tr>
           </thead>
@@ -470,7 +500,6 @@
       document.getElementById("searchResults").classList.add("hidden");
     }
 
-    // Nueva función que calcula automáticamente la fecha de término basada en los Días Autorizados
     function calcularFechaTermino() {
       const fechaInicioInput = document.getElementById("fechaInicio").value;
       const diasInput = parseInt(document.getElementById("diasAutorizados").value) || 0;
@@ -510,13 +539,15 @@
 
       const btn = document.getElementById("btnGuardar");
       btn.disabled = true;
-      btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Guardando...`;
+      btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Guardando y clasificando en Drive...`;
 
       const nuevoRegistro = {
         id: Date.now(),
         nombreCompleto: document.getElementById("nombreCompleto").value,
         empresa: document.getElementById("empresaInput").value || "Maxikash MX",
         nss: document.getElementById("nss").value || "S/N",
+        mesCorrespondiente: document.getElementById("mesCorrespondiente").value,
+        quincenaCorrespondiente: document.getElementById("quincenaCorrespondiente").value,
         folio: document.getElementById("folio").value,
         ramo: document.getElementById("ramo").value,
         fechaInicio: document.getElementById("fechaInicio").value,
@@ -563,7 +594,7 @@
       document.getElementById("archivoNombre").innerText = "Ningún archivo seleccionado";
       document.getElementById("fechaRegistro").value = new Date().toISOString().split('T')[0];
 
-      alert("¡Registro guardado exitosamente!");
+      alert("¡Registro e integración a Drive guardados exitosamente!");
     }
 
     function actualizarTabla() {
@@ -572,7 +603,7 @@
       let totalDias = 0;
 
       if (incapacidadesDB.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="12" class="text-center py-6 text-gray-400">No hay incapacidades registradas aún.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="11" class="text-center py-6 text-gray-400">No hay incapacidades registradas aún.</td></tr>`;
         document.getElementById("statTotal").innerText = "0";
         document.getElementById("statDias").innerText = "0";
         return;
@@ -585,7 +616,7 @@
         tr.innerHTML = `
           <td class="p-3 font-bold text-gray-800">${reg.nombreCompleto}</td>
           <td class="p-3 font-black text-maxikash-blue">${reg.empresa}</td>
-          <td class="p-3 font-medium text-gray-600">${reg.nss}</td>
+          <td class="p-3"><span class="bg-gray-100 text-gray-800 font-bold px-2 py-0.5 rounded text-[10px]">${reg.mesCorrespondiente || 'N/A'}</span> <span class="bg-blue-100 text-maxikash-blue font-black px-2 py-0.5 rounded text-[10px]">${reg.quincenaCorrespondiente || 'N/A'}</span></td>
           <td class="p-3 text-maxikash-blue font-bold">${reg.folio}</td>
           <td class="p-3">${reg.ramo}</td>
           <td class="p-3">${reg.fechaInicio}</td>
@@ -593,7 +624,6 @@
           <td class="p-3 text-center font-black text-maxikash-blue">${reg.diasAutorizados}</td>
           <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-blue-100 text-maxikash-blue">${reg.estatus}</span></td>
           <td class="p-3 text-[11px]">${reg.puesto} / ${reg.departamento}</td>
-          <td class="p-3 text-[11px]">${reg.nombreJefe} / ${reg.representanteRRHH}</td>
           <td class="p-3 text-center">
             ${reg.documentoUrl && reg.documentoUrl !== '#' ? `<a href="${reg.documentoUrl}" download="${reg.documentoNombre}" class="bg-maxikash-blue text-white px-2 py-1 rounded text-[10px] font-bold">Descargar</a>` : '<span class="text-gray-400">Registrado</span>'}
           </td>
@@ -607,8 +637,8 @@
 
     function exportarCSV() {
       if (!incapacidadesDB.length) return alert("No hay datos para exportar.");
-      let csv = "data:text/csv;charset=utf-8,Apellidos_Nombre,Empresa,NSS_DPI,Folio,Ramo,Inicio,Termino,Dias,Estatus\n";
-      incapacidadesDB.forEach(r => csv += `"${r.nombreCompleto}","${r.empresa}","${r.nss}","${r.folio}","${r.ramo}","${r.fechaInicio}","${r.fechaTermino}","${r.diasAutorizados}","${r.estatus}"\n`);
+      let csv = "data:text/csv;charset=utf-8,Apellidos_Nombre,Empresa,Mes,Quincena,NSS_DPI,Folio,Ramo,Inicio,Termino,Dias,Estatus\n";
+      incapacidadesDB.forEach(r => csv += `"${r.nombreCompleto}","${r.empresa}","${r.mesCorrespondiente}","${r.quincenaCorrespondiente}","${r.nss}","${r.folio}","${r.ramo}","${r.fechaInicio}","${r.fechaTermino}","${r.diasAutorizados}","${r.estatus}"\n`);
       const link = document.createElement("a");
       link.href = encodeURI(csv);
       link.download = "Incapacidades.csv";
